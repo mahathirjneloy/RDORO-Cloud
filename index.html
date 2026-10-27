@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RDORO</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9" />
+          <polyline points="12 7 12 12 15 15" />
+        </svg>
+        <span class="brand-title">RDORO</span>
+      </div>
+      <div class="header-actions">
+        <button id="btn-sound-toggle" class="icon-btn" title="Toggle Sound (M)">
+          <svg id="icon-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+          </svg>
+        </button>
+        <button id="btn-open-analytics" class="pill-btn highlight">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="14" />
+          </svg>
+          Analytics & Records
+        </button>
+      </div>
+    </header>
+
+    <main class="main-stage">
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="focus">Focus</button>
+        <button class="mode-tab" data-mode="shortBreak">Short Break</button>
+        <button class="mode-tab" data-mode="longBreak">Long Break</button>
+      </div>
+
+      <div class="subject-panel">
+        <span class="subject-label">TRACKING:</span>
+        <div class="preset-chips">
+          <button class="chip active" data-subject="EEE">EEE</button>
+          <button class="chip" data-subject="MAT">MAT</button>
+          <button class="chip" data-subject="CSE">CSE</button>
+          <button class="chip" data-subject="CHE 101">CHE 101</button>
+        </div>
+        <input type="text" id="custom-subject" placeholder="or custom subject..." maxlength="24" />
+      </div>
+
+      <div class="timer-dial-container">
+        <svg class="dial-svg" viewBox="0 0 320 320">
+          <circle class="dial-track" cx="160" cy="160" r="140" />
+          <circle id="dial-progress" class="dial-fill" cx="160" cy="160" r="140" />
+        </svg>
+        <div class="dial-content">
+          <span id="timer-display" class="time-readout">25:00</span>
+          <span id="current-course-badge" class="badge">EEE</span>
+          <span id="session-counter-text" class="counter-text">Session #1</span>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <button id="btn-toggle" class="primary-btn">Start</button>
+        <button id="btn-stop-log" class="secondary-btn" title="Stop and log partial time">Stop & Log</button>
+        <button id="btn-reset" class="icon-btn-large" title="Reset current timer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        </button>
+        <button id="btn-skip" class="icon-btn-large" title="Skip to next mode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 4 15 12 5 20 5 4" />
+            <line x1="19" y1="5" x2="19" y2="19" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="quick-status-bar">
+        <span>Today: <strong id="quick-today-time">0h 00m</strong></span>
+        <span>Streak: <strong id="quick-streak">0 days</strong></span>
+      </div>
+    </main>
+
+    <!-- Analytics & Records Modal -->
+    <div id="analytics-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h2>Study Records & Analytics</h2>
+            <p class="subtitle">Precise timestamped logs & multi-timeframe aggregations</p>
+          </div>
+          <button id="btn-close-analytics" class="icon-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-nav">
+          <button class="nav-tab active" data-view="day">Day</button>
+          <button class="nav-tab" data-view="week">Week</button>
+          <button class="nav-tab" data-view="month">Month (Heatmap)</button>
+          <button class="nav-tab" data-view="year">Year</button>
+          <button class="nav-tab" data-view="history">All Logs</button>
+        </div>
+
+        <div class="modal-body">
+          <div id="view-day" class="view-panel active">
+            <div class="stats-cards-grid">
+              <div class="card"><span class="kpi-label">TOTAL TODAY</span><span id="kpi-day-total" class="kpi-val">0h 0m 0s</span></div>
+              <div class="card"><span class="kpi-label">SESSIONS</span><span id="kpi-day-count" class="kpi-val">0</span></div>
+              <div class="card"><span class="kpi-label">COMPLETED RATIO</span><span id="kpi-day-ratio" class="kpi-val">0%</span></div>
+            </div>
+            <div class="section-title">COURSE TIME DISTRIBUTION</div>
+            <div id="day-course-breakdown" class="course-breakdown-list"></div>
+          </div>
+
+          <div id="view-week" class="view-panel">
+            <div class="stats-cards-grid">
+              <div class="card"><span class="kpi-label">THIS WEEK TOTAL</span><span id="kpi-week-total" class="kpi-val">0h 0m</span></div>
+              <div class="card"><span class="kpi-label">DAILY AVERAGE</span><span id="kpi-week-avg" class="kpi-val">0h 0m</span></div>
+            </div>
+            <div class="section-title">LAST 7 DAYS (MINUTES)</div>
+            <div id="week-chart" class="bar-chart-container"></div>
+          </div>
+
+          <div id="view-month" class="view-panel">
+            <div class="stats-cards-grid">
+              <div class="card"><span class="kpi-label">THIS MONTH TOTAL</span><span id="kpi-month-total" class="kpi-val">0h 0m</span></div>
+              <div class="card"><span class="kpi-label">ACTIVE DAYS</span><span id="kpi-month-days" class="kpi-val">0 / 31</span></div>
+            </div>
+            <div class="section-title">CALENDAR HEATMAP</div>
+            <div id="month-heatmap-grid" class="calendar-grid"></div>
+          </div>
+
+          <div id="view-year" class="view-panel">
+            <div class="stats-cards-grid">
+              <div class="card"><span class="kpi-label">THIS YEAR TOTAL</span><span id="kpi-year-total" class="kpi-val">0h 0m</span></div>
+              <div class="card"><span class="kpi-label">CURRENT STREAK</span><span id="kpi-year-streak" class="kpi-val">0 days</span></div>
+            </div>
+            <div class="section-title">12 MONTH OVERVIEW</div>
+            <div id="year-months-grid" class="months-overview-grid"></div>
+          </div>
+
+          <div id="view-history" class="view-panel">
+            <div class="table-actions">
+              <button id="btn-export-csv" class="pill-btn">Export CSV</button>
+              <button id="btn-export-json" class="pill-btn">Export JSON</button>
+              <button id="btn-load-demo" class="pill-btn subtle">Load Demo Data</button>
+              <button id="btn-clear-logs" class="pill-btn danger">Clear All</button>
+            </div>
+            <div class="table-wrap">
+              <table class="logs-table">
+                <thead>
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>Course</th>
+                    <th>Type</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="logs-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
