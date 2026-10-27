@@ -31,33 +31,54 @@ jobs:
       - name: Setup Rust Stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Self-Healing Tree & Asset Recovery
+      - name: Self-Healing Tree & Version Sync
         shell: powershell
         run: |
-          Write-Host "Verifying repository structure..." -ForegroundColor Cyan
+          Write-Host "Verifying repository structure & syncing Tauri v2 versions..." -ForegroundColor Cyan
 
           # 1. Guarantee directory hierarchy exists
           $requiredDirs = @("src", "src-tauri", "src-tauri/src", "src-tauri/capabilities")
           foreach ($dir in $requiredDirs) {
             if (-not (Test-Path $dir)) {
-              Write-Host "Creating missing directory: $dir" -ForegroundColor Yellow
               New-Item -ItemType Directory -Path $dir -Force | Out-Null
             }
           }
 
-          # 2. Heal root-flattened files if browser drag-and-drop misplaced them
+          # 2. Heal root-flattened files if misplaced
           if (Test-Path "main.rs") { Move-Item -Path "main.rs" -Destination "src-tauri/src/main.rs" -Force }
           if (Test-Path "build.rs") { Move-Item -Path "build.rs" -Destination "src-tauri/build.rs" -Force }
           if (Test-Path "Cargo.toml") { Move-Item -Path "Cargo.toml" -Destination "src-tauri/Cargo.toml" -Force }
           if (Test-Path "tauri.conf.json") { Move-Item -Path "tauri.conf.json" -Destination "src-tauri/tauri.conf.json" -Force }
           if (Test-Path "default.json") { Move-Item -Path "default.json" -Destination "src-tauri/capabilities/default.json" -Force }
-
           if (Test-Path "main.ts") { Move-Item -Path "main.ts" -Destination "src/main.ts" -Force }
           if (Test-Path "style.css") { Move-Item -Path "style.css" -Destination "src/style.css" -Force }
 
-          # 3. Recreate app-icon.svg if omitted
+          # 3. Fix Tauri version mismatch by removing any stale Cargo.lock and setting flexible "2" in Cargo.toml
+          if (Test-Path "src-tauri/Cargo.lock") {
+            Remove-Item "src-tauri/Cargo.lock" -Force
+          }
+
+          $cargoToml = @'
+          [package]
+          name = "rdoro"
+          version = "1.0.0"
+          description = "RDORO Precision Focus & Study Tracking System"
+          authors = ["RDORO"]
+          edition = "2021"
+
+          [build-dependencies]
+          tauri-build = { version = "2", features = [] }
+
+          [dependencies]
+          tauri = { version = "2", features = [] }
+          serde = { version = "1.0", features = ["derive"] }
+          serde_json = "1.0"
+          '@
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::WriteAllText("$PWD/src-tauri/Cargo.toml", $cargoToml.Trim(), $utf8NoBom)
+
+          # 4. Recreate app-icon.svg if missing
           if (-not (Test-Path "app-icon.svg")) {
-            Write-Host "app-icon.svg missing, generating default geometric icon..." -ForegroundColor Yellow
             $svg = @'
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
             <rect width="512" height="512" rx="112" fill="#0c0e12" />
@@ -68,11 +89,15 @@ jobs:
             <circle cx="256" cy="256" r="18" fill="#34d399" />
           </svg>
           '@
-            [System.IO.File]::WriteAllText("$PWD/app-icon.svg", $svg, [System.Text.Encoding]::UTF8)
+            [System.IO.File]::WriteAllText("$PWD/app-icon.svg", $svg.Trim(), $utf8NoBom)
           }
 
       - name: Install Frontend & CLI Dependencies
         run: pnpm install --no-frozen-lockfile
+
+      - name: Update Cargo Crates to Match Latest Tauri 2.x
+        working-directory: src-tauri
+        run: cargo update
 
       - name: Generate Multi-Resolution App Icons
         run: pnpm tauri icon app-icon.svg
