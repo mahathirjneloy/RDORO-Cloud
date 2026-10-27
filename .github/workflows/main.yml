@@ -1,0 +1,90 @@
+name: Build Native Windows App
+
+on:
+  push:
+    branches: ["main", "master"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Setup Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Self-Healing Tree & Asset Recovery
+        shell: powershell
+        run: |
+          Write-Host "Verifying repository structure..." -ForegroundColor Cyan
+
+          # 1. Guarantee directory hierarchy exists
+          $requiredDirs = @("src", "src-tauri", "src-tauri/src", "src-tauri/capabilities")
+          foreach ($dir in $requiredDirs) {
+            if (-not (Test-Path $dir)) {
+              Write-Host "Creating missing directory: $dir" -ForegroundColor Yellow
+              New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            }
+          }
+
+          # 2. Heal root-flattened files if browser drag-and-drop misplaced them
+          if (Test-Path "main.rs") { Move-Item -Path "main.rs" -Destination "src-tauri/src/main.rs" -Force }
+          if (Test-Path "build.rs") { Move-Item -Path "build.rs" -Destination "src-tauri/build.rs" -Force }
+          if (Test-Path "Cargo.toml") { Move-Item -Path "Cargo.toml" -Destination "src-tauri/Cargo.toml" -Force }
+          if (Test-Path "tauri.conf.json") { Move-Item -Path "tauri.conf.json" -Destination "src-tauri/tauri.conf.json" -Force }
+          if (Test-Path "default.json") { Move-Item -Path "default.json" -Destination "src-tauri/capabilities/default.json" -Force }
+
+          if (Test-Path "main.ts") { Move-Item -Path "main.ts" -Destination "src/main.ts" -Force }
+          if (Test-Path "style.css") { Move-Item -Path "style.css" -Destination "src/style.css" -Force }
+
+          # 3. Recreate app-icon.svg if omitted
+          if (-not (Test-Path "app-icon.svg")) {
+            Write-Host "app-icon.svg missing, generating default geometric icon..." -ForegroundColor Yellow
+            $svg = @'
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+            <rect width="512" height="512" rx="112" fill="#0c0e12" />
+            <circle cx="256" cy="256" r="184" fill="none" stroke="#1c222e" stroke-width="28" />
+            <circle cx="256" cy="256" r="184" fill="none" stroke="#10b981" stroke-width="28" stroke-dasharray="867 1156" stroke-linecap="round" transform="rotate(-90 256 256)" />
+            <circle cx="256" cy="256" r="132" fill="#14171f" />
+            <polygon points="256,160 274,256 256,240 238,256" fill="#10b981" />
+            <circle cx="256" cy="256" r="18" fill="#34d399" />
+          </svg>
+          '@
+            [System.IO.File]::WriteAllText("$PWD/app-icon.svg", $svg, [System.Text.Encoding]::UTF8)
+          }
+
+      - name: Install Frontend & CLI Dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate Multi-Resolution App Icons
+        run: pnpm tauri icon app-icon.svg
+
+      - name: Compile Windows Native App
+        run: pnpm tauri build
+
+      - name: Upload Windows Installers (.exe & .msi)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RDORO-Windows-Installer
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
